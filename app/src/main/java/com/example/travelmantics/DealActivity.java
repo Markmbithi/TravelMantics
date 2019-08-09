@@ -19,8 +19,11 @@ import android.widget.EditText;
 import android.widget.Toast;
 import android.widget.ImageView;
 
+import com.google.android.gms.tasks.Continuation;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.storage.StorageReference;
@@ -52,7 +55,7 @@ public class DealActivity extends AppCompatActivity {
         txtPrice = (EditText) findViewById(R.id.txtPrice);
         imageView = (ImageView) findViewById(R.id.image);
         Intent intent = getIntent();
-        TravelDeal deal = (TravelDeal) intent.getSerializableExtra("Deal");
+        deal = (TravelDeal) intent.getSerializableExtra("Deal");
         if (deal==null) {
             deal = new TravelDeal();
         }
@@ -106,13 +109,14 @@ public class DealActivity extends AppCompatActivity {
 
             Uri imageUri = data.getData();
 
-            StorageReference ref = FirebaseUtil.mStorageRef.child(imageUri.getLastPathSegment());
+            final StorageReference ref = FirebaseUtil.mStorageRef.child(imageUri.getLastPathSegment());
+
             Log.d("Last Path Segment",imageUri.getLastPathSegment());
 
             UploadTask uploadTask = ref.putFile(imageUri);
 
             // Register observers to listen for when the download is done or if it fails
-            uploadTask.addOnFailureListener(new OnFailureListener() {
+            /*uploadTask.addOnFailureListener(new OnFailureListener() {
                 @Override
                 public void onFailure(@NonNull Exception exception) {
                     // Handle unsuccessful uploads
@@ -120,14 +124,50 @@ public class DealActivity extends AppCompatActivity {
             }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                 @Override
                 public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+
+                    String url1=ref.getDownloadUrl().toString();
                     String url = taskSnapshot.getStorage().getDownloadUrl().toString();
                     String pictureName = taskSnapshot.getStorage().getPath();
                     //String url = taskSnapshot.getMetadata().getPath()getReference().getDownloadUrl().toString();
                     deal.setImageUrl(url);
                     deal.setImageName(pictureName);
+                    Log.d("Picture Url",url1);
                     Log.d("Picture Url",url);
                     Log.d("Picture Name",pictureName);
                     showImage(url);
+                }
+            });*/
+
+            //// =========================================================================
+
+            Task<Uri> urlTask = uploadTask.continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
+                @Override
+                public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
+                    if (!task.isSuccessful()) {
+                        throw task.getException();
+                    }
+
+                    // Continue with the task to get the download URL
+                    return ref.getDownloadUrl();
+                }
+            }).addOnCompleteListener(new OnCompleteListener<Uri>() {
+                @Override
+                public void onComplete(@NonNull Task<Uri> task) {
+                    if (task.isSuccessful()) {
+
+                        Uri downloadUri = task.getResult();
+                        String picUrl=downloadUri.toString();
+                        String pictureName=task.getResult().getLastPathSegment();
+                        deal.setImageUrl(picUrl);
+                        deal.setImageName(pictureName);
+                        Log.d("Picture Name",pictureName);
+                        Log.d("Download URL of picture",downloadUri.toString());
+                        showImage(picUrl);
+
+                    } else {
+                        // Handle failures
+                        // ...
+                    }
                 }
             });
 
@@ -144,7 +184,6 @@ public class DealActivity extends AppCompatActivity {
                     showImage(url);
                 }
             });*/
-
         }
     }
 

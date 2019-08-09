@@ -40,15 +40,14 @@ public class ListActivity extends AppCompatActivity {
         else {
             insertMenu.setVisible(false);
         }
-
-
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
 
-        switch(item.getItemId()){
+        switch(item.getItemId())
+        {
             case R.id.insert_menu:
                 Intent intent=new Intent(this, DealActivity.class);
                 startActivity(intent);
